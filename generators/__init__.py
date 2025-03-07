@@ -1,1 +1,1 @@
-from .profiling import generate_profiling_task
+from .profiling import generate_task_to_find_slow_function

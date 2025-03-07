@@ -1,3 +1,5 @@
+# генерация случайного математического выражения, взятая из репозитория, отправленного Заславским
+
 import argparse
 from random import choice, seed, random
 
