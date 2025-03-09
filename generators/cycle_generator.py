@@ -1,9 +1,9 @@
 import random
+import os
 
 class CCodeGenerator:
     def __init__(self, max_depth=1):
         self.max_depth = max_depth # Максимальная глубина вложенности циклов
-        self.alphabet = [chr(i) for i in range(97, 123)] # Алфавит индексов для цикла for
         # Исходный код на C
         ''' c_code_part1:
             Первая часть исходного кода задачи, 
@@ -23,10 +23,10 @@ int main()
         ''' c_code_part2:
             Вторая часть исходного кода задачи, 
             В данной части содержится код,
-            который проверяет индекс a на выход за границы массива
+            который проверяет индекс i1 на выход за границы массива
         '''
         self.c_code_part2 = r"""
-    if (a < 0 || a >= 10) { 
+    if (i1 < 0 || i1 >= 10) { 
         fprintf(stderr, "Error: index out of range\n"); 
         exit(EXIT_FAILURE); 
     }
@@ -71,7 +71,7 @@ int main()
     def generate_incorrect_cycle(self, current_depth):
         '''Функция генерирует некорректную строку кода с ошибкой в цикле for'''
         # Получение индекса для текущей глубины вложенности из алфавита
-        index_in_cycle = self.alphabet[current_depth - 1]
+        index_in_cycle = f"i{current_depth}"
         # for (index_in_cycle = number_one; index_in_cycle <= number_two ; index_in_cycle++) 
         # Генерация случайных чисел для  цикла
         number_one = self.generate_random_number()
@@ -140,16 +140,11 @@ int main()
 
         # Цикл для генерации кода в зависимости от глубины вложенности
         for current_depth in range(1, self.max_depth + 1):
-            index = self.alphabet[current_depth - 1]  # Получение текущего индекса из алфавита
+            index = f"i{current_depth}"  # Получение текущего индекса из алфавита
             indices += f"{index}"  # Добавление индекса к строке объявлений переменных
             array_dimensions += f"[{index}]"  # Формирование размеров массива
             multiplication += f"{index} * "  # Формирование выражения для умножения
             tabs = "    " * current_depth  # Определение отступа в зависимости от глубины вложенности
-            # Формирование размера массива: current_depth определяет количество измерений
-            array_dimensions_const = current_depth * "[10]"
-            # Добавление строки объявления массива в код
-            # Формат: int numbers_<буква>[10][10]... (в зависимости от глубины)
-            array_code += f"    int numbers_{index}{array_dimensions_const};\n"
 
             # Генерация вложенного цикла
             nested_code = self.generate_incorrect_cycle(current_depth)  # Генерация кода для вложенного цикла
@@ -158,29 +153,35 @@ int main()
 
             # Определение переменной multi и массива numbers
             if current_depth < self.max_depth:
-                # Если текущая глубина меньше максимальной, добавляем код для массива
-                multi_array = f"    {tabs}numbers_{index}{array_dimensions} = {multiplication}number;\n"
-                loops_for += multi_array  # Добавление кода для массива в loops_for
                 indices += f", "  # Добавление запятой для следующего индекса
             else:
                 # Если достигнута максимальная глубина, добавляем код для переменной multi
                 multi = f"    {tabs}multi = {multiplication}number;\n"
                 multi_array = f"    {tabs}numbers_{index}{array_dimensions} = multi;\n"
-                print_statement = f"    {tabs}printf(\"multi = %d\", multi);\n"  # Формирование строки для вывода
+                print_statement = f"    {tabs}printf(\"multi = %d\\n\", multi);\n"  # Формирование строки для вывода
                 tabuleted_code = self.tabulate_code(self.c_code_part2, current_depth)  # Табулирование кода
                 loops_for += tabuleted_code + multi + multi_array + print_statement  # Добавление всех строк в loops_for
 
+        # Формирование размера массива: current_depth определяет количество измерений
+        array_dimensions_const = self.max_depth * "[10]"
+        # Добавление строки объявления массива в код
+        # Формат: int numbers_<буква>[10][10]... (в зависимости от глубины)
+        array_code = f"    int numbers_{index}{array_dimensions_const};\n"
         indices += f";\n"  # Добавление последнего индекса с точкой с запятой
         # Формирование полного кода C, объединяя все части
         c_code = self.c_code_part1 + indices + array_code + loops_for + close_brackets + self.c_code_part3
         return c_code  # Возврат сгенерированного кода
 
-    def write_c_code_to_file(self, filename):
+    def write_c_code_to_file(self, file_path):
         '''Функция записывает код с ошибкой в файл'''
         # Генерируем некорректный код с ошибкой в цикле
         c_code = self.generate_incorrect_c_code()
+        # Получаем директорию из пути к файлу
+        directory = os.path.dirname(file_path)
+        # Создаём директорию, если она не существует
+        os.makedirs(directory, exist_ok=True)
         # Открываем и записываем полученный код в файл
-        with open(filename, 'w') as file:
+        with open(file_path, 'w') as file:
             file.write(c_code)
 
 # Использование класса
@@ -188,13 +189,13 @@ if __name__ == "__main__":  # Проверяем, что скрипт запущ
     try:
         # Запрашиваем у пользователя ввод максимальной глубины вложенности циклов
         max_depth = int(input("Введите максимальную глубину вложенности циклов: "))  
-        if max_depth < 1:  # Проверяем, что введенное значение положительное
-            raise ValueError("Глубина должна быть положительным целым числом.")  # Если значение меньше 1, выбрасываем исключение
+        if max_depth < 1 or max_depth > 100:  # Проверяем, что введенное значение положительное
+            raise ValueError("Глубина должна быть положительным целым числом, меньше или равным 100.")  # Если значение меньше 1, выбрасываем исключение
     except ValueError as e:  # Обрабатываем исключения, возникающие при некорректном вводе
         print(f"Ошибка ввода: {e}")  # Выводим сообщение об ошибке
     else:  # Если исключений не возникло
         generator = CCodeGenerator(max_depth=max_depth)  # Создаем экземпляр класса CCodeGenerator с заданной глубиной
-        output_filename = "generated_code_with_cycle.c"  # Указываем имя файла для сохранения сгенерированного кода
-        generator.write_c_code_to_file(output_filename)  # Вызываем метод для записи сгенерированного кода в файл
-        print(f"Код успешно сгенерирован и записан в файл: {output_filename}")  # Сообщаем пользователю об успешном завершении операции
+        output_file_path = "generators/data/generators_files/generated_code_with_cycle.c"  # Указываем путь к файлу для сохранения сгенерированного кода
+        generator.write_c_code_to_file(output_file_path)  # Вызываем метод для записи сгенерированного кода в файл
+        print(f"Код успешно сгенерирован и записан в файл: {output_file_path}")  # Сообщаем пользователю об успешном завершении операции
 
